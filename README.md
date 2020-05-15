@@ -8,9 +8,10 @@ End goal is to emulate Space Invaders
 
 ## Testing 
 
-Run `make test & ./8080testrunner`
+Run `make test && ./8080testrunner`
 
 Only the `8080PRE.COM` tests pass currently.
+
 
 ## Running Space Invaders
 
