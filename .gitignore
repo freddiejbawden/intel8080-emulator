@@ -1,0 +1,5 @@
+8080testrunner
+intel8080
+obj/**
+rom/**
+.vscode/**
