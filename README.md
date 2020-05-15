@@ -14,7 +14,7 @@ Only the `8080PRE.COM` tests pass currently.
 
 ## Running Space Invaders
 
-To run Space Invaders you'll need to provide a ROM, the rom generally comes in 4 parts:
+To run Space Invaders you'll need to provide a ROM, the ROM generally comes in 4 parts:
 
 ```
 invaders.e
