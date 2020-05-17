@@ -22,14 +22,13 @@ uint8_t Parity(uint16_t value) {
   int size = 8;
   int i;
   int p = 0;
-  x = (x & ((1 << size) - 1));
-  for (i = 0; i < size; i++) {
-      if (x & 0x1) {
-          p++;
-      }
-      x = x >> 1;
-  }
-  return (0 == (p & 0x1));
+	x = (x & ((1<<size)-1));
+	for (i=0; i<size; i++)
+	{
+		if (x & 0x1) p++;
+		x = x >> 1;
+	}
+	return (0 == (p & 0x1));
 }
 
 uint8_t AuxCarry(uint16_t value) {
@@ -53,8 +52,6 @@ void SetArithFlags(State8080 *state, uint16_t value, uint8_t flagstoset) {
     uint8_t cleaned = flagstoset & 0b11111000;
     if (cleaned & SET_Z_FLAG) {
         state->cc.z = Zero(value);
-           
-
     }
     if (cleaned & SET_S_FLAG) {
         state->cc.s = Sign(value);
@@ -97,8 +94,15 @@ void SetLogicFlags(State8080 *state, uint8_t res, uint8_t flagstoset) {
 void increment(State8080* state, uint8_t *ptr) {
   uint16_t value = (uint16_t) *ptr + 1;
   // INR does not affect carry bit
-  uint8_t flags = SET_Z_FLAG | SET_S_FLAG | SET_P_FLAG | SET_AC_FLAG;
-  SetArithFlags(state, value, flags);
+  SetArithFlags(state, value, SET_P_FLAG | SET_S_FLAG | SET_Z_FLAG);
+  state->cc.ac =  (((value) & 0x0f) == 0);
+  *ptr = value & 0xff;
+}
+void decrement(State8080* state, uint8_t *ptr) {
+  uint16_t value = (uint16_t) *ptr - 1;
+  // INR does not affect carry bit
+  SetArithFlags(state, value, SET_P_FLAG | SET_S_FLAG | SET_Z_FLAG);
+  state->cc.ac = !(((value) & 0x0f) == 0x0f); 
   *ptr = value & 0xff;
 }
 
@@ -119,13 +123,6 @@ void dad_xy(State8080 *state, uint8_t *x, uint8_t *y) {
   state->cc.cy = ((result & 0xffff0000) != 0);
 }
 
-void decrement(State8080* state, uint8_t *ptr) {
-  uint16_t value = (uint16_t) *ptr - 1;
-  // INR does not affect carry bit
-  uint8_t flags = SET_Z_FLAG | SET_S_FLAG | SET_P_FLAG | SET_AC_FLAG;
-  SetArithFlags(state, value, flags);
-  *ptr = value & 0xff;
-}
 
 
 
