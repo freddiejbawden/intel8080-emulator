@@ -644,7 +644,13 @@ int Emulate8080Op(State8080* state, int debug)
     case 0xc3: jmp(state, MakeWord(opcode[2], opcode[1])); return 0; break; // PC <- adr
     case 0xc4: condCall(state, MakeWord(opcode[2], opcode[1]), (state->cc.z == 0)); break;
     case 0xc5: Push(state, state->b, state->c); break;
-    case 0xc6: AddI(state, opcode[1]); break; // A <- A + byte
+    case 0xc6: {
+			uint16_t x = (uint16_t) state->a + (uint16_t) opcode[1];
+      SetArithFlags(state, x&0xff, SET_P_FLAG | SET_S_FLAG | SET_Z_FLAG);
+			state->cc.cy = (x > 0xff);
+			state->a = x&0xff;
+			state->pc++;
+        } break; // A <- A + byte
     case 0xc7: call(state, 0x0000); break; // reset 
     case 0xc8: condRet(state, state->cc.z); break;
     case 0xc9: ret(state); break; //sp +2 
@@ -652,7 +658,13 @@ int Emulate8080Op(State8080* state, int debug)
     case 0xcb: UnusedInstruction(state); break;
     case 0xcc: condCall(state, MakeWord(opcode[2], opcode[1]), state->cc.z); break; // if Z, call adr
     case 0xcd: call(state, MakeWord(opcode[2], opcode[1])); break; // sp<-pc, sp+2, pc=adr
-    case 0xce: AddCI(state, opcode[1]);  break; // A <- A + data+ CY
+    case 0xce: {
+			uint16_t x = state->a + opcode[1] + state->cc.cy;
+      SetArithFlags(state, x&0xff, SET_P_FLAG | SET_S_FLAG | SET_Z_FLAG);
+			state->cc.cy = (x > 0xff);
+			state->a = x & 0xff;
+			state->pc++;
+        }  break; // A <- A + data+ CY
     case 0xcf: call(state, 0x0008); break; //call $8
     
     case 0xd0: condRet(state, state->cc.cy == 0); break;
@@ -661,7 +673,13 @@ int Emulate8080Op(State8080* state, int debug)
     case 0xd3: break; // Handled In Upper Layer
     case 0xd4: condCall(state, MakeWord(opcode[2], opcode[1]), (state->cc.cy == 0)); break; 
     case 0xd5: Push(state, state->d, state->e); break;
-    case 0xd6: SubI(state, opcode[1]);  break;
+    case 0xd6:  {
+			uint8_t x = state->a - opcode[1];
+      SetArithFlags(state, x&0xff, SET_P_FLAG | SET_S_FLAG | SET_Z_FLAG);
+			state->cc.cy = (state->a < opcode[1]);
+			state->a = x;
+			state->pc++;
+        } break;
     case 0xd7: call(state, 0x0010); break; //call $8
     case 0xd8: condRet(state, state->cc.cy); break;
     case 0xd9: UnusedInstruction(state); break;
@@ -669,7 +687,13 @@ int Emulate8080Op(State8080* state, int debug)
     case 0xdb: break; // In
     case 0xdc: condCall(state, MakeWord(opcode[2], opcode[1]), state->cc.cy); break; // if CY, call adr
     case 0xdd: UnusedInstruction(state); break;
-    case 0xde: SubCI(state, opcode[1]);  break;
+    case 0xde:  {
+			uint16_t x = state->a - opcode[1] - state->cc.cy;
+      SetArithFlags(state, x&0xff, SET_P_FLAG | SET_S_FLAG | SET_Z_FLAG);
+			state->cc.cy = (x > 0xff);
+			state->a = x & 0xff;
+			state->pc++;
+        } break;
     case 0xdf: call(state, 0x0018); break; //call $8
 
     case 0xe0: condRet(state, state->cc.p == 0); break;
@@ -689,9 +713,10 @@ int Emulate8080Op(State8080* state, int debug)
       }break; // if PO, call adr
     case 0xe5: Push(state, state->h, state->l); break;
     case 0xe6: {
-        Ana(state, opcode[1]);
-        state->pc++;
-      }
+			state->a = state->a & opcode[1];
+			SetLogicFlags(state, state->a, SET_ALL_FLAGS);
+			state->pc++;
+        }
       break;
     case 0xe7: call(state, 0x0020); break; //call $20
     case 0xe8: condRet(state, state->cc.p); break;
@@ -707,7 +732,13 @@ int Emulate8080Op(State8080* state, int debug)
       break; // Swap DE and HL
     case 0xec:  condCall(state,MakeWord(opcode[2], opcode[1]), state->cc.p); break; // if CY, call adr
     case 0xed: UnusedInstruction(state); break;
-    case 0xee: Xra(state, opcode[1]); state->pc += 1; break;
+    case 0xee:  {
+			uint8_t x = state->a ^ opcode[1];
+      SetArithFlags(state, x&0xff, SET_P_FLAG | SET_S_FLAG | SET_Z_FLAG);
+			state->cc.cy = 0;		//data book says clear cy
+			state->a = x;
+			state->pc++;
+        } break;
     case 0xef: call(state, 0x0028); break; //call $8
 
     case 0xf0: condRet(state, state->cc.s == 0); break;
@@ -767,7 +798,14 @@ int Emulate8080Op(State8080* state, int debug)
             state->sp -= 2;
       }
       break;
-    case 0xf6: Ori(state, opcode[1]); state->pc += 1; break;
+    case 0xf6: {
+			//AC set if lower nibble of h was zero prior to dec
+			uint8_t x = state->a | opcode[1];
+      SetArithFlags(state, x, SET_Z_FLAG | SET_P_FLAG | SET_S_FLAG);
+			state->cc.cy = 0;
+			state->a = x;
+			state->pc++;
+        } break;
     case 0xf7: call(state, 0x0030); break; //call $30
     case 0xf8: condRet(state, state->cc.s); break; // if PE; RET
     case 0xf9: {
@@ -783,7 +821,9 @@ int Emulate8080Op(State8080* state, int debug)
     case 0xfd: UnusedInstruction(state); break;
     case 0xfe: 
       {
-        cmp(state, opcode[1]);
+        uint8_t x = state->a - opcode[1];
+        SetArithFlags(state, x&0xff, SET_P_FLAG | SET_S_FLAG | SET_Z_FLAG);
+			  state->cc.cy = (state->a < opcode[1]);
         state->pc += 1;
       }
       break;
