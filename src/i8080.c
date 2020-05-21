@@ -31,9 +31,20 @@ uint8_t Parity(uint16_t value) {
 	return (0 == (p & 0x1));
 }
 
-uint8_t AuxCarry(uint16_t value) {
- return 0;  
+uint8_t AuxCarryAddition(State8080 *state ,uint16_t value, uint16_t result) {
+  uint16_t index = ((state->a & 0x88) >> 1) |                 
+            (((value) & 0x88) >> 2) |             
+            ((result & 0x88) >> 3);
+  return half_carry_table[index & 0x7];
 }
+
+uint8_t AuxCarrySub(State8080 *state ,uint16_t value, uint16_t result) {
+  uint16_t index = ((state->a & 0x88) >> 1) |                 
+            (((value) & 0x88) >> 2) |             
+            ((result & 0x88) >> 3);
+  return !sub_half_carry_table[index & 0x7];
+}
+
 
 uint8_t Zero(uint16_t value) {
   return ((value & 0xff) == 0);
@@ -63,7 +74,7 @@ void SetArithFlags(State8080 *state, uint16_t value, uint8_t flagstoset) {
         state->cc.cy = Carry(value);
     }
     if (cleaned & SET_AC_FLAG) {
-      state->cc.ac = AuxCarry(value); 
+      state->cc.ac = 0; 
   }
 }
 
@@ -235,67 +246,58 @@ void MoveRegister(unsigned char code, State8080* state)
 
 }
 
-
-void GenericAdd(State8080* state, uint16_t value) {
-  uint16_t answer = state->a + value;
-  SetArithFlags(state, answer, SET_ALL_FLAGS);
-  state->a = answer & 0xff; 
+void Add(State8080 *state, uint8_t value) {
+  uint16_t x = (uint16_t) state->a + value;
+  SetArithFlags(state, x&0xff, SET_P_FLAG | SET_S_FLAG | SET_Z_FLAG);
+  state->cc.cy = (x > 0xff);
+  state->cc.ac = AuxCarryAddition(state,value,x);
+  state->a = x&0xff;
 }
 
-void AddI(State8080* state, unsigned char code) {
-  GenericAdd(state, (uint16_t) code);
-  state->pc += 1;
+void AddC(State8080 *state, uint8_t value) {
+  uint16_t x = (uint16_t) state->a + value + state->cc.cy;
+  SetArithFlags(state, x&0xff, SET_P_FLAG | SET_S_FLAG | SET_Z_FLAG);
+  state->cc.cy = (x > 0xff);
+  state->cc.ac = AuxCarryAddition(state,value,x);
+  state->a = x & 0xff;
 }
 
-void AddCI(State8080* state, unsigned char code) {
-  GenericAdd(state, (uint16_t) (((uint8_t) code) + state->cc.cy));
-  state->pc += 1;
+void Sub(State8080 *state, uint8_t value) {
+  uint8_t x = state->a - value;
+  SetArithFlags(state, x&0xff, SET_P_FLAG | SET_S_FLAG | SET_Z_FLAG);
+  state->cc.cy = (state->a < value);
+  state->cc.ac = AuxCarrySub(state, value, x);
+  state->a = x;
 }
 
-void Add(State8080* state, unsigned char code) {
-  GenericAdd(state, (uint16_t) GetValueOfRegister(state, code));
+void Sbb(State8080 *state, uint8_t value) {
+ uint16_t x = state->a - value - state->cc.cy;
+  SetArithFlags(state, x&0xff, SET_P_FLAG | SET_S_FLAG | SET_Z_FLAG);
+  state->cc.cy = (x > 0xff);
+  state->cc.ac = AuxCarrySub(state, value, x);
+  state->a = x & 0xff;
 }
 
-void AddC(State8080* state, unsigned char code) {
-  GenericAdd(state, (uint16_t) (GetValueOfRegister(state, code) + state->cc.cy));
+void Ana(State8080 *state, uint8_t value) {
+  state->cc.ac = ((state->a | value) & 0x08) != 0;   
+  state->a = state->a & value;
+	SetLogicFlags(state, state->a, SET_ALL_FLAGS ^ SET_AC_FLAG);			
 }
 
-void Sub(State8080* state, unsigned char code) {
-  GenericAdd(state,  (uint16_t) -GetValueOfRegister(state, code));
+void Xra(State8080 *state, uint8_t value) {
+    uint8_t x = state->a ^ value;
+    SetArithFlags(state, x&0xff, SET_P_FLAG | SET_S_FLAG | SET_Z_FLAG);
+    state->cc.cy = 0;		//data book says clear cy
+    state->cc.ac = 0;		//data book says clear cy
+    state->a = x;		
 }
 
-void SubI(State8080* state, unsigned char code ) {
-  GenericAdd(state, (uint16_t) -code);
-}
-
-void SubCI(State8080* state, unsigned char code) {
-  SubI(state, (uint16_t) (((uint8_t) code) + state->cc.cy));
-  state->pc += 1;
-}
-
-void SubB(State8080* state, unsigned char code) {
-  GenericAdd(state, (uint16_t) (-GetValueOfRegister(state, code) - state->cc.cy));
-}
-void SubBI(State8080* state, unsigned char code) {
-  GenericAdd(state, (uint16_t) (-code - state->cc.cy));
-}
-
-void Ana(State8080* state, uint8_t x) {
-  uint16_t result = state->a & x;
-  SetLogicFlags(state, result, SET_ALL_FLAGS);
-  state->a = result & 0xff;
-}
-
-void Ori(State8080* state, uint8_t x) {
-  uint16_t result = (uint16_t) state->a | x;
-  SetLogicFlags(state, result, SET_ALL_FLAGS);
-  state->a = result & 0xff;
-}
-
-void Xra(State8080 *state, uint8_t x) {
-  uint16_t result = state->a ^ x;
-  SetLogicFlags(state, result, SET_ALL_FLAGS);
-  state->a = result & 0xff;
+void Ora(State8080 *state, uint8_t value) {
+ uint8_t x = state->a | value;
+  SetArithFlags(state, x, SET_Z_FLAG | SET_P_FLAG | SET_S_FLAG);
+  state->cc.cy = 0;
+  state->cc.ac = 0;
+  state->a = x;		
 }
 
 void Pop(State8080* state, uint8_t *right, uint8_t *left) {
@@ -324,12 +326,11 @@ void jmp(State8080 *state, uint16_t adr) {
   state->pc = adr;
 }
 
-void cmp(State8080 *state, uint8_t x) {
-  uint16_t answer;
-  answer =  state->a - x;
-  SetArithFlags(state, answer, SET_ALL_FLAGS ^ SET_CY_FLAG);
-  state->cc.cy = state->a < x;
-
+void cmp(State8080 *state, uint8_t value) {
+  uint16_t x = state->a -value;
+  state->cc.ac = AuxCarrySub(state, value, x);
+  SetArithFlags(state, x&0xff, SET_P_FLAG | SET_S_FLAG | SET_Z_FLAG);
+  state->cc.cy = (state->a < value);
 }
 
 void jmp_cond(State8080 *state, uint16_t adr, uint8_t cond) {
@@ -438,7 +439,6 @@ int Emulate8080Op(State8080* state, int debug)
       MoveRegister(opcode[0], state);
     }
   } else if (first == 8 && last < 8) {
-    // ADD A X
     Add(state, opcode[0]);
   } else if (first == 8 && last >= 8) {
     AddC(state, opcode[0]);
@@ -446,7 +446,7 @@ int Emulate8080Op(State8080* state, int debug)
     if (last < 8) {
       Sub(state, GetValueOfRegister(state, opcode[0]));
     } else {
-      SubB(state, GetValueOfRegister(state, opcode[0]));
+      Sbb(state, GetValueOfRegister(state, opcode[0]));
     }
 
   } else if (first == 10) {
@@ -457,7 +457,7 @@ int Emulate8080Op(State8080* state, int debug)
     }
   } else if (first == 11) {
     if (last < 8) {
-      Ori(state, GetValueOfRegister(state, opcode[0]));
+      Ora(state, GetValueOfRegister(state, opcode[0]));
     } else {
       cmp(state, GetValueOfRegister(state, opcode[0]));
     }
@@ -645,10 +645,7 @@ int Emulate8080Op(State8080* state, int debug)
     case 0xc4: condCall(state, MakeWord(opcode[2], opcode[1]), (state->cc.z == 0)); break;
     case 0xc5: Push(state, state->b, state->c); break;
     case 0xc6: {
-			uint16_t x = (uint16_t) state->a + (uint16_t) opcode[1];
-      SetArithFlags(state, x&0xff, SET_P_FLAG | SET_S_FLAG | SET_Z_FLAG);
-			state->cc.cy = (x > 0xff);
-			state->a = x&0xff;
+			Add(state, opcode[1]);
 			state->pc++;
         } break; // A <- A + byte
     case 0xc7: call(state, 0x0000); break; // reset 
@@ -659,10 +656,7 @@ int Emulate8080Op(State8080* state, int debug)
     case 0xcc: condCall(state, MakeWord(opcode[2], opcode[1]), state->cc.z); break; // if Z, call adr
     case 0xcd: call(state, MakeWord(opcode[2], opcode[1])); break; // sp<-pc, sp+2, pc=adr
     case 0xce: {
-			uint16_t x = state->a + opcode[1] + state->cc.cy;
-      SetArithFlags(state, x&0xff, SET_P_FLAG | SET_S_FLAG | SET_Z_FLAG);
-			state->cc.cy = (x > 0xff);
-			state->a = x & 0xff;
+			AddC(state, opcode[1]);
 			state->pc++;
         }  break; // A <- A + data+ CY
     case 0xcf: call(state, 0x0008); break; //call $8
@@ -674,10 +668,7 @@ int Emulate8080Op(State8080* state, int debug)
     case 0xd4: condCall(state, MakeWord(opcode[2], opcode[1]), (state->cc.cy == 0)); break; 
     case 0xd5: Push(state, state->d, state->e); break;
     case 0xd6:  {
-			uint8_t x = state->a - opcode[1];
-      SetArithFlags(state, x&0xff, SET_P_FLAG | SET_S_FLAG | SET_Z_FLAG);
-			state->cc.cy = (state->a < opcode[1]);
-			state->a = x;
+			Sub(state, opcode[1]);
 			state->pc++;
         } break;
     case 0xd7: call(state, 0x0010); break; //call $8
@@ -688,10 +679,7 @@ int Emulate8080Op(State8080* state, int debug)
     case 0xdc: condCall(state, MakeWord(opcode[2], opcode[1]), state->cc.cy); break; // if CY, call adr
     case 0xdd: UnusedInstruction(state); break;
     case 0xde:  {
-			uint16_t x = state->a - opcode[1] - state->cc.cy;
-      SetArithFlags(state, x&0xff, SET_P_FLAG | SET_S_FLAG | SET_Z_FLAG);
-			state->cc.cy = (x > 0xff);
-			state->a = x & 0xff;
+      Sbb(state, opcode[1]);
 			state->pc++;
         } break;
     case 0xdf: call(state, 0x0018); break; //call $8
@@ -713,8 +701,7 @@ int Emulate8080Op(State8080* state, int debug)
       }break; // if PO, call adr
     case 0xe5: Push(state, state->h, state->l); break;
     case 0xe6: {
-			state->a = state->a & opcode[1];
-			SetLogicFlags(state, state->a, SET_ALL_FLAGS);
+			Ana(state, opcode[1]);
 			state->pc++;
         }
       break;
@@ -733,10 +720,7 @@ int Emulate8080Op(State8080* state, int debug)
     case 0xec:  condCall(state,MakeWord(opcode[2], opcode[1]), state->cc.p); break; // if CY, call adr
     case 0xed: UnusedInstruction(state); break;
     case 0xee:  {
-			uint8_t x = state->a ^ opcode[1];
-      SetArithFlags(state, x&0xff, SET_P_FLAG | SET_S_FLAG | SET_Z_FLAG);
-			state->cc.cy = 0;		//data book says clear cy
-			state->a = x;
+			Xra(state, opcode[1]);
 			state->pc++;
         } break;
     case 0xef: call(state, 0x0028); break; //call $8
@@ -800,10 +784,7 @@ int Emulate8080Op(State8080* state, int debug)
       break;
     case 0xf6: {
 			//AC set if lower nibble of h was zero prior to dec
-			uint8_t x = state->a | opcode[1];
-      SetArithFlags(state, x, SET_Z_FLAG | SET_P_FLAG | SET_S_FLAG);
-			state->cc.cy = 0;
-			state->a = x;
+			Ora(state, opcode[1]);
 			state->pc++;
         } break;
     case 0xf7: call(state, 0x0030); break; //call $30
@@ -821,9 +802,7 @@ int Emulate8080Op(State8080* state, int debug)
     case 0xfd: UnusedInstruction(state); break;
     case 0xfe: 
       {
-        uint8_t x = state->a - opcode[1];
-        SetArithFlags(state, x&0xff, SET_P_FLAG | SET_S_FLAG | SET_Z_FLAG);
-			  state->cc.cy = (state->a < opcode[1]);
+        cmp(state, opcode[1]);
         state->pc += 1;
       }
       break;
