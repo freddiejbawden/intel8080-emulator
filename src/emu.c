@@ -7,6 +7,7 @@
 #include <emu.h>
 #include <machine.h>
 #include <i8080.h>
+#include <input.h>
 
 #define MAX_STEPS 100000
 #define SECOND_NS 1000000.0
@@ -117,6 +118,7 @@ void RunEmu(char*file) {
   int middle = 1;
 
   State8080 state = SetUpEmu();
+  InputMap inp = CreateInputMap();
   LoadROM(&state, file, 0x0);
   printf("Running %s", file);
   // Set up graphics
@@ -128,14 +130,19 @@ void RunEmu(char*file) {
   SDL_Event event;
   int fsize = GetFileSize(file);
   while (state.pc < fsize) {
-    if (SDL_PollEvent(&event) && event.type == SDL_QUIT)
-          break;
+    if (SDL_PollEvent(&event)) {
+      if (event.type == SDL_QUIT){
+        break;
+      } else {
+        GetInput(&inp, event);
+      }
+    } 
     uint64_t cur_time = getCurrentTime();
       if (!state.int_enable) {
         startTime = cur_time;
       }
       if (state.int_enable) {
-        if (cur_time - startTime > SECOND_NS / 120) {
+        if (cur_time - startTime > SECOND_NS / 240) {
           
           if (middle == 1) {
             GenerateInterrupt(&state, 8);
@@ -149,7 +156,7 @@ void RunEmu(char*file) {
           startTime = cur_time;
       }
     }
-    NextInstruction(&state);
+    NextInstruction(&state, &inp);
   }
   print_state(&state);
   EndScreen(rend, win);

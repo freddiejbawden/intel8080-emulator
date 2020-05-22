@@ -1,7 +1,7 @@
 // File to handle space invaders specific architecutres
 
 #include <i8080.h>
-
+#include <input.h>
 #ifndef MACHINE
 #define MACHINE
 
@@ -16,7 +16,7 @@ typedef struct IOPorts {
 
 int Shift();
 
-int NextInstruction(State8080 *state);
+int NextInstruction(State8080 *state, InputMap *inp);
 
 
 

@@ -1,6 +1,7 @@
 #include <machine.h>
 #include <i8080.h>
 #include <stdio.h>
+#include <input.h>
 
 int shift_register_offset = 0;
 int shift0 = 0;
@@ -40,15 +41,15 @@ void MachineOutPort(State8080 *state, uint8_t port, uint8_t value) {
   }
 }
 
-void MachineInPort(State8080 *state, uint8_t port) {
+void MachineInPort(State8080 *state,InputMap *inp, uint8_t port) {
   // printf("Machine In %02x\n", port);
   uint8_t value = 0;
 
   if (port == 1) {
-      value = 1 << 3;
+      value = inp->in_port1;
   }
   else if (port == 2) {
-      value = 0;
+    value = inp->in_port2;
   }
   else if (port == 3) {
      value = Shift();
@@ -60,13 +61,13 @@ void MachineInPort(State8080 *state, uint8_t port) {
 }
 
 int count = 0;
-int NextInstruction(State8080 *state) {
+int NextInstruction(State8080 *state, InputMap *inp) {
   uint8_t *opcode = &state->memory[state->pc];
 
     if (*opcode == 0xdb) //machine specific handling for IN    
     {    
         uint8_t port = opcode[1];    
-        MachineInPort(state, port);    
+        MachineInPort(state,inp, port);    
         state->pc+=2;    
     }    
     else if (*opcode == 0xd3)  //OUT    

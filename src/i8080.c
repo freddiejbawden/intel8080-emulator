@@ -148,26 +148,6 @@ uint8_t read_hl(State8080 *state)
   return m;
 }
 
-void write_state(State8080 *state, FILE *pFile) {
-    fprintf(pFile, "A: 0x%02x \n", state->a);
-    fprintf(pFile,"B: 0x%02x ", state->b);
-    fprintf(pFile,"C: 0x%02x ", state->c);
-    fprintf(pFile,"D: 0x%02x ", state->d);
-    fprintf(pFile,"E: 0x%02x ", state->e);
-    fprintf(pFile,"H: 0x%02x ", state->h);
-    fprintf(pFile,"L: 0x%02x \n", state->l);
-    fprintf(pFile,"Z: %d", state->cc.z);
-    fprintf(pFile,"S: %d", state->cc.s);
-    fprintf(pFile,"P: %d", state->cc.p);
-    fprintf(pFile,"CY: %d", state->cc.cy);
-    fprintf(pFile,"AC %d\n", state->cc.ac);
-    fprintf(pFile,"SP: 0x%04x\n", state->sp);
-    fprintf(pFile,"PC: 0x%04x\n", state->pc);
-    fprintf(pFile,"Interrupt enable: %d\n", state->int_enable);
-    fprintf(pFile,"Memory Current: 0x%04x ", read_hl(state));
-    fprintf(pFile,"\n");
-}
-
 void print_state(State8080 *state) {
     printf("\n");
     printf("----------------------------------\n");

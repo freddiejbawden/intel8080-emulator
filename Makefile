@@ -9,7 +9,7 @@ MAINS_DIR = main
 SRC = $(wildcard $(SRC_DIR)/*.c)
 OBJ = $(SRC:$(SRC_DIR)/%.c=$(OBJ_DIR)/%.o)
 
-CFLAGS += -Wall -O0
+CFLAGS += -Wall
 CPPFLAGS += -Iinclude
 LDFLAGS=-l SDL2-2.0.0
 
