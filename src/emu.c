@@ -9,20 +9,8 @@
 #include <i8080.h>
 #include <input.h>
 
-#define MAX_STEPS 100000
-#define SECOND_NS 1000000.0
+#define CLOCK_SPEED 2e6;
 
-size_t get_num_instrs(char *input) {
-    if (strlen(input) == 1) {
-        return 1;
-    }
-    // If the string starts with an 
-    // alphanumeric character or only 
-    // contains alphanumeric characters,
-    // 0 is returned.
-    size_t steps = (size_t) atoi(input); 
-    return steps < MAX_STEPS ? steps : MAX_STEPS; 
-}
 
 void GenerateInterrupt(State8080 *state, int interrupt_num)    
    {   
@@ -128,6 +116,7 @@ void RunEmu(char*file) {
   SDL_Renderer* rend = CreateRenderer(win);
   uint64_t startTime = getCurrentTime();
   SDL_Event event;
+  int cpu_cycles = 0;
   int fsize = GetFileSize(file);
   while (state.pc < fsize) {
     if (SDL_PollEvent(&event)) {
@@ -142,21 +131,21 @@ void RunEmu(char*file) {
         startTime = cur_time;
       }
       if (state.int_enable) {
-        if (cur_time - startTime > SECOND_NS / 240) {
-          
+        if (cpu_cycles > CLOCK_SPEED / 120) {
+          cpu_cycles = 0;
           if (middle == 1) {
             GenerateInterrupt(&state, 8);
             middle = 0;
           } else {
             GenerateInterrupt(&state, 10);
             middle = 1;
+            DrawScreen(&state, rend, middle);
+            cur_time = getCurrentTime();
+            startTime = cur_time;
           }
-          DrawScreen(&state, rend, middle);
-          cur_time = getCurrentTime();
-          startTime = cur_time;
       }
     }
-    NextInstruction(&state, &inp);
+    cpu_cycles += NextInstruction(&state, &inp);
   }
   print_state(&state);
   EndScreen(rend, win);

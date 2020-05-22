@@ -48,7 +48,7 @@ int EndScreen(SDL_Renderer* rend, SDL_Window* win) {
 }
 
 void DrawScreen(State8080 *state, SDL_Renderer* rend, int middle) {  
-
+  
   int limit = (WINDOW_HEIGHT * WINDOW_WIDTH) / 8;
   for (int i = 0; i < limit; i++) {
     int y = i * 8 / WINDOW_HEIGHT;

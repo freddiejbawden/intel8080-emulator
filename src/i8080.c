@@ -14,6 +14,29 @@
 #define SET_AC_FLAG (1 << 3)
 #define SET_ALL_FLAGS (SET_Z_FLAG | SET_S_FLAG | SET_P_FLAG | SET_CY_FLAG | SET_AC_FLAG)
 
+
+unsigned char cycles8080[] = {
+	4, 10, 7, 5, 5, 5, 7, 4, 4, 10, 7, 5, 5, 5, 7, 4, //0x00..0x0f
+	4, 10, 7, 5, 5, 5, 7, 4, 4, 10, 7, 5, 5, 5, 7, 4, //0x10..0x1f
+	4, 10, 16, 5, 5, 5, 7, 4, 4, 10, 16, 5, 5, 5, 7, 4, //etc
+	4, 10, 13, 5, 10, 10, 10, 4, 4, 10, 13, 5, 5, 5, 7, 4,
+	
+	5, 5, 5, 5, 5, 5, 7, 5, 5, 5, 5, 5, 5, 5, 7, 5, //0x40..0x4f
+	5, 5, 5, 5, 5, 5, 7, 5, 5, 5, 5, 5, 5, 5, 7, 5,
+	5, 5, 5, 5, 5, 5, 7, 5, 5, 5, 5, 5, 5, 5, 7, 5,
+	7, 7, 7, 7, 7, 7, 7, 7, 5, 5, 5, 5, 5, 5, 7, 5,
+	
+	4, 4, 4, 4, 4, 4, 7, 4, 4, 4, 4, 4, 4, 4, 7, 4, //0x80..8x4f
+	4, 4, 4, 4, 4, 4, 7, 4, 4, 4, 4, 4, 4, 4, 7, 4,
+	4, 4, 4, 4, 4, 4, 7, 4, 4, 4, 4, 4, 4, 4, 7, 4,
+	4, 4, 4, 4, 4, 4, 7, 4, 4, 4, 4, 4, 4, 4, 7, 4,
+	
+	11, 10, 10, 10, 17, 11, 7, 11, 11, 10, 10, 10, 10, 17, 7, 11, //0xc0..0xcf
+	11, 10, 10, 10, 17, 11, 7, 11, 11, 10, 10, 10, 10, 17, 7, 11, 
+	11, 10, 10, 18, 17, 11, 7, 11, 11, 5, 10, 5, 17, 17, 7, 11, 
+	11, 10, 10, 4, 17, 11, 7, 11, 11, 5, 10, 4, 17, 17, 7, 11, 
+};
+
 int half_carry_table[] = { 0, 0, 1, 0, 1, 0, 1, 1 };
 int sub_half_carry_table[] = { 0, 1, 1, 1, 0, 0, 0, 1 };
 
@@ -193,38 +216,7 @@ void dcr_hl(State8080* state){
 }
 
 
-uint16_t GetValueOfRegister(State8080* state, unsigned char code) 
-{
-  char dest = GetDest(code);
-  switch(dest) {
-    case 'B': return state->b;
-    case 'C': return state->c;
-    case 'D': return state->d;
-    case 'E': return state->e;
-    case 'H': return state->h;
-    case 'L': return state->l;
-    case 'M': return read_hl(state);
-    case 'A': return state->a;
-  }
-  return 0;
-}
 
-
-void MoveRegister(unsigned char code, State8080* state) 
-{
-  char target = GetSource(code);
-  switch(target) {
-    case 'B': state->b = GetValueOfRegister(state, code); break;
-    case 'C': state->c = GetValueOfRegister(state, code); break;
-    case 'D': state->d = GetValueOfRegister(state, code); break;
-    case 'E': state->e = GetValueOfRegister(state, code); break;
-    case 'H': state->h = GetValueOfRegister(state, code); break;
-    case 'L': state->l = GetValueOfRegister(state, code); break;
-    case 'M': set_hl(state, GetValueOfRegister(state, code)); break;
-    case 'A': state->a = GetValueOfRegister(state, code); break;
-  }
-
-}
 
 void Add(State8080 *state, uint8_t value) {
   uint16_t x = (uint16_t) state->a + value;
@@ -408,43 +400,8 @@ int Emulate8080Op(State8080* state, int debug)
   
   
 
-  state->pc += 1;
-
-  int first = GetFirstPart(opcode[0]);
-  int last  = GetLastPart(opcode[0]);
-  if (first >= 4 && first <= 7) {
-    if (first == 7 && last == 6) {
-     printf("HALT");
-    } else {
-      MoveRegister(opcode[0], state);
-    }
-  } else if (first == 8) {
-    if (last < 8) {
-      Add(state, GetValueOfRegister(state, opcode[0]));
-    } else {
-      AddC(state, GetValueOfRegister(state, opcode[0]));
-    }
-  } else if (first == 9) {
-    if (last < 8) {
-      Sub(state, GetValueOfRegister(state, opcode[0]));
-    } else {
-      Sbb(state, GetValueOfRegister(state, opcode[0]));
-    }
-
-  } else if (first == 10) {
-    if (last < 8) {
-      Ana(state, GetValueOfRegister(state, opcode[0]));
-    } else {
-      Xra(state, GetValueOfRegister(state, opcode[0]));
-    }
-  } else if (first == 11) {
-    if (last < 8) {
-      Ora(state, GetValueOfRegister(state, opcode[0]));
-    } else {
-      cmp(state, GetValueOfRegister(state, opcode[0]));
-    }
-  } else {
-    switch(*opcode) 
+  state->pc += 1;  
+  switch(*opcode) 
   {
     case 0x00: break;
     case 0x01:
@@ -620,6 +577,150 @@ int Emulate8080Op(State8080* state, int debug)
       state->cc.cy = !state->cc.cy;
     }break; // CY <- !CY
 
+    case 0x40: state->b = state->b; break;
+    case 0x41: state->b = state->c; break;
+    case 0x42: state->b = state->d; break;
+    case 0x43: state->b = state->e; break;
+    case 0x44: state->b = state->h; break;
+    case 0x45: state->b = state->l; break;
+    case 0x46: state->b = read_hl(state); break;
+    case 0x47: state->b = state->a; break;
+    
+    case 0x48: state->c = state->b; break;
+    case 0x49: state->c = state->c; break;
+    case 0x4a: state->c = state->d; break;
+    case 0x4b: state->c = state->e; break;
+    case 0x4c: state->c = state->h; break;
+    case 0x4d: state->c = state->l; break;
+    case 0x4e: state->c = read_hl(state); break;
+    case 0x4f: state->c = state->a; break;
+
+    case 0x50: state->d = state->b; break;
+    case 0x51: state->d = state->c; break;
+    case 0x52: state->d = state->d; break;
+    case 0x53: state->d = state->e; break;
+    case 0x54: state->d = state->h; break;
+    case 0x55: state->d = state->l; break;
+    case 0x56: state->d = read_hl(state); break;
+    case 0x57: state->d = state->a; break;
+
+    case 0x58: state->e = state->b; break;
+    case 0x59: state->e = state->c; break;
+    case 0x5a: state->e = state->d; break;
+    case 0x5b: state->e = state->e; break;
+    case 0x5c: state->e = state->h; break; 
+    case 0x5d: state->e = state->l; break;
+    case 0x5e: state->e = read_hl(state); break;
+    case 0x5f: state->e = state->a; break;
+    
+    case 0x60: state->h = state->b; break;
+    case 0x61: state->h = state->c; break;
+    case 0x62: state->h = state->d; break; 
+    case 0x63: state->h = state->e; break;
+    case 0x64: state->h = state->h; break;
+    case 0x65: state->h = state->l; break;
+    case 0x66: state->h = read_hl(state); break;
+    case 0x67: state->h = state->a; break; 
+
+    case 0x68: state->l = state->b; break;
+    case 0x69: state->l = state->c; break; 
+    case 0x6a: state->l = state->d; break;
+    case 0x6b: state->l = state->e; break;
+    case 0x6c: state->l = state->h; break; 
+    case 0x6d: state->l = state->l;break; 
+    case 0x6e: state->l = read_hl(state); break;
+    case 0x6f: state->l = state->a; break;
+
+    case 0x70: set_hl(state, state->b); break;
+    case 0x71: set_hl(state, state->c); break;
+    case 0x72: set_hl(state, state->d); break;
+    case 0x73: set_hl(state, state->e); break;
+    case 0x74: set_hl(state, state->h); break;
+    case 0x75: set_hl(state, state->l); break;
+    case 0x76: break; // HLT handled in upper layer
+    case 0x77: set_hl(state, state->a); break;
+
+    case 0x78: state->a = state->b; break;
+    case 0x79: state->a = state->c; break; 
+    case 0x7a: state->a = state->d; break;
+    case 0x7b: state->a = state->e; break;
+    case 0x7c: state->a = state->h; break;
+    case 0x7d: state->a = state->l; break;
+    case 0x7e: state->a = read_hl(state); break;
+    case 0x7f: state->a = state->a; break;
+
+    case 0x80: Add(state, state->b); break;
+    case 0x81: Add(state, state->c); break;
+    case 0x82: Add(state, state->d); break;
+    case 0x83: Add(state, state->e); break;
+    case 0x84: Add(state, state->h); break;
+    case 0x85: Add(state, state->l); break;
+    case 0x86: Add(state, read_hl(state)); break;
+    case 0x87: Add(state, state->a); break;
+
+    case 0x88: AddC(state, state->b); break;
+    case 0x89: AddC(state, state->c); break;
+    case 0x8a: AddC(state, state->d); break;
+    case 0x8b: AddC(state, state->e); break;
+    case 0x8c: AddC(state, state->h); break;
+    case 0x8d: AddC(state, state->l); break;
+    case 0x8e: AddC(state, read_hl(state)); break;
+    case 0x8f: AddC(state, state->a); break;
+
+    case 0x90: Sub(state, state->b); break;
+    case 0x91: Sub(state, state->c); break;
+    case 0x92: Sub(state, state->d); break;
+    case 0x93: Sub(state, state->e); break;
+    case 0x94: Sub(state, state->h); break;
+    case 0x95: Sub(state, state->l); break;
+    case 0x96: Sub(state, read_hl(state)); break;
+    case 0x97: Sub(state, state->a); break;
+
+    case 0x98: Sbb(state, state->b); break;
+    case 0x99: Sbb(state, state->c); break;
+    case 0x9a: Sbb(state, state->d); break;
+    case 0x9b: Sbb(state, state->e); break;
+    case 0x9c: Sbb(state, state->h); break;
+    case 0x9d: Sbb(state, state->l); break;
+    case 0x9e: Sbb(state, read_hl(state)); break;
+    case 0x9f: Sbb(state, state->a); break;
+
+    case 0xa0: Ana(state, state->b); break;
+    case 0xa1: Ana(state, state->c); break;
+    case 0xa2: Ana(state, state->d); break;
+    case 0xa3: Ana(state, state->e); break;
+    case 0xa4: Ana(state, state->h); break;
+    case 0xa5: Ana(state, state->l); break;
+    case 0xa6: Ana(state, read_hl(state)); break;
+    case 0xa7: Ana(state, state->a); break;
+
+    case 0xa8: Xra(state, state->b); break;
+    case 0xa9: Xra(state, state->c); break;
+    case 0xaa: Xra(state, state->d); break;
+    case 0xab: Xra(state, state->e); break;
+    case 0xac: Xra(state, state->h); break;
+    case 0xad: Xra(state, state->l); break;
+    case 0xae: Xra(state, read_hl(state)); break;
+    case 0xaf: Xra(state, state->a); break;
+
+    case 0xb0: Ora(state, state->b); break;
+    case 0xb1: Ora(state, state->c); break;
+    case 0xb2: Ora(state, state->d); break;
+    case 0xb3: Ora(state, state->e); break;
+    case 0xb4: Ora(state, state->h); break;
+    case 0xb5: Ora(state, state->l); break;
+    case 0xb6: Ora(state, read_hl(state)); break;
+    case 0xb7: Ora(state, state->a); break;
+
+    case 0xb8: cmp(state, state->b); break;
+    case 0xb9: cmp(state, state->c); break;
+    case 0xba: cmp(state, state->d); break;
+    case 0xbb: cmp(state, state->e); break;
+    case 0xbc: cmp(state, state->h); break;
+    case 0xbd: cmp(state, state->l); break;
+    case 0xbe: cmp(state, read_hl(state)); break;
+    case 0xbf: cmp(state, state->b); break;
+
     case 0xc0: condRet(state, state->cc.z == 0); break; // if zero flag not set return (NZ)
     case 0xc1: Pop(state, &state->c, &state->b); break; 
     case 0xc2: jmp_cond(state, MakeWord(opcode[2], opcode[1]), state->cc.z == 0);break; 
@@ -793,7 +894,6 @@ int Emulate8080Op(State8080* state, int debug)
       UnimplementedInstruction(state);
       break;
     }
-  }
-  return state->pc;
+  return cycles8080[opcode[0]];
 } 
 

@@ -80,7 +80,7 @@ int NextInstruction(State8080 *state, InputMap *inp) {
     else  {
       int debug = 0;
       return Emulate8080Op(state, debug);
-        // printf("Current A: %02x\n", state->a);  
+      // printf("Current A: %02x\n", state->a);  
     }
     return 1;  
   }    
