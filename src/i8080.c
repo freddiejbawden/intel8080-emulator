@@ -107,7 +107,7 @@ void increment(State8080* state, uint8_t *ptr) {
   // INR does not affect carry bit
   SetArithFlags(state, value, SET_P_FLAG | SET_S_FLAG | SET_Z_FLAG);
   state->cc.ac =  (((value) & 0x0f) == 0);
-  *ptr = value & 0xff;
+  *ptr = value;
 }
 void decrement(State8080* state, uint8_t *ptr) {
   uint16_t value = (uint16_t) *ptr - 1;
@@ -213,7 +213,7 @@ void dcr_hl(State8080* state){
 }
 
 
-uint8_t GetValueOfRegister(State8080* state, unsigned char code) 
+uint16_t GetValueOfRegister(State8080* state, unsigned char code) 
 {
   char dest = GetDest(code);
   switch(dest) {
@@ -280,7 +280,7 @@ void Sbb(State8080 *state, uint8_t value) {
 
 void Ana(State8080 *state, uint8_t value) {
   state->cc.ac = ((state->a | value) & 0x08) != 0;   
-  state->a = state->a & value;
+  state->a &= value;
 	SetLogicFlags(state, state->a, SET_ALL_FLAGS ^ SET_AC_FLAG);			
 }
 
@@ -293,7 +293,8 @@ void Xra(State8080 *state, uint8_t value) {
 }
 
 void Ora(State8080 *state, uint8_t value) {
- uint8_t x = state->a | value;
+
+  uint8_t x = state->a | value;
   SetArithFlags(state, x, SET_Z_FLAG | SET_P_FLAG | SET_S_FLAG);
   state->cc.cy = 0;
   state->cc.ac = 0;
@@ -375,19 +376,18 @@ void ret(State8080 *state) {
 }
 
 void daa(State8080* state){
-  // first step, split A into two parts
-  uint8_t upper = state->a >> 4;
-  uint8_t lower = state->a & 0x0F;
-
-  if (lower >= 10) {
-    state->a += 6;
+  uint8_t carry = state->cc.cy;
+  uint16_t add = 0;
+  if (state->cc.ac || (state->a & 0x0f) > 9) {
+      add = 0x06;
   }
-  if (upper > 0x90)
-  {
-      uint16_t result = (uint16_t) state->a + 0x60;
-      state->a = result & 0xff;
-      SetArithFlags(state, result, SET_ALL_FLAGS);
+  if (state->cc.cy || (state->a >> 4) > 9 || ((state->a >> 4) >= 9 && (state->a & 0x0f) > 9)) {
+      add |= 0x60;
+      carry = 1;
   }
+  Add(state, add);
+  state->cc.p = Parity(state->a);
+  state->cc.cy = carry;
 }
 
 void condRet(State8080 *state, uint8_t cond) {
@@ -438,10 +438,12 @@ int Emulate8080Op(State8080* state, int debug)
     } else {
       MoveRegister(opcode[0], state);
     }
-  } else if (first == 8 && last < 8) {
-    Add(state, opcode[0]);
-  } else if (first == 8 && last >= 8) {
-    AddC(state, opcode[0]);
+  } else if (first == 8) {
+    if (last < 8) {
+      Add(state, GetValueOfRegister(state, opcode[0]));
+    } else {
+      AddC(state, GetValueOfRegister(state, opcode[0]));
+    }
   } else if (first == 9) {
     if (last < 8) {
       Sub(state, GetValueOfRegister(state, opcode[0]));
