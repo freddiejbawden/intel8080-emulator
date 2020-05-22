@@ -102,13 +102,10 @@ void execute_test(char* filename, int success_check) {
          Emulate8080Op(&state, 0);
   
         if (state.pc == 0) {
-            printf("\nJump to 0000 from %04X\n", pc);
             if (success_check && !success) {
                 printf("success");
                 exit(1);
             }
-              print_state(&state);
-
             return;
         }
     }
