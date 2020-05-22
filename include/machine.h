@@ -16,10 +16,8 @@ typedef struct IOPorts {
 
 int Shift();
 
-void NextInstruction(State8080 *state);
+int NextInstruction(State8080 *state);
 
-void MachineOutPort(State8080 *state, uint8_t port, uint8_t);
 
-uint8_t MachineInPort(State8080 *state, uint8_t port);
 
 #endif

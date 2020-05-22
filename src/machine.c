@@ -2,9 +2,9 @@
 #include <i8080.h>
 #include <stdio.h>
 
-int shift_register_offset;
-int shift0;
-int shift1;
+int shift_register_offset = 0;
+int shift0 = 0;
+int shift1 = 0;
 
 void SetShiftRegister(int offset) {
   shift_register_offset = offset;
@@ -40,31 +40,33 @@ void MachineOutPort(State8080 *state, uint8_t port, uint8_t value) {
   }
 }
 
-uint8_t MachineInPort(State8080 *state, uint8_t port) {
+void MachineInPort(State8080 *state, uint8_t port) {
   // printf("Machine In %02x\n", port);
-  if (port == 0) {
-    return 0x01;
-  }
+  uint8_t value = 0;
+
   if (port == 1) {
-    return 0x01;
+      value = 1 << 3;
   }
-  if (port == 2) {
-    return 0x00;
-  } 
-  if (port == 3) {
-    int shifted_value = Shift();
-    state->a = shifted_value;
+  else if (port == 2) {
+      value = 0;
   }
-  return 0;
+  else if (port == 3) {
+     value = Shift();
+  }
+  else {
+      fprintf(stderr, "error: unknown IN port %02X\n", port);
+  }
+  state->a = value;
 }
+
 int count = 0;
-void NextInstruction(State8080 *state) {
+int NextInstruction(State8080 *state) {
   uint8_t *opcode = &state->memory[state->pc];
 
     if (*opcode == 0xdb) //machine specific handling for IN    
     {    
         uint8_t port = opcode[1];    
-        state->a = MachineInPort(state, port);    
+        MachineInPort(state, port);    
         state->pc+=2;    
     }    
     else if (*opcode == 0xd3)  //OUT    
@@ -75,10 +77,10 @@ void NextInstruction(State8080 *state) {
         state->pc+=2;    
     }    
     else  {
-      int debug = 1;
-        Emulate8080Op(state, debug);
-  
+      int debug = 0;
+      return Emulate8080Op(state, debug);
         // printf("Current A: %02x\n", state->a);  
-    }  
+    }
+    return 1;  
   }    
 

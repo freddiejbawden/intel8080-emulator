@@ -3,7 +3,7 @@
 #include <i8080.h>
 #include <SDL2/SDL.h>
 #include <stdlib.h>
-#define WINDOW_WIDTH 244
+#define WINDOW_WIDTH 224
 #define WINDOW_HEIGHT 256
 
 
