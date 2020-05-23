@@ -9,7 +9,6 @@
 #include <i8080.h>
 #include <input.h>
 
-#define CLOCK_SPEED 2e6;
 
 
 void GenerateInterrupt(State8080 *state, int interrupt_num)    
@@ -110,13 +109,11 @@ void RunEmu(char*file) {
   LoadROM(&state, file, 0x0);
   printf("Running %s", file);
   // Set up graphics
-  StartScreen();
-
-  SDL_Window* win = CreateWindow();
-  SDL_Renderer* rend = CreateRenderer(win);
+  Graphics g = SetUpGraphics();
   uint64_t startTime = getCurrentTime();
   SDL_Event event;
   int cpu_cycles = 0;
+  int clock_speed = 2e6/120;
   int fsize = GetFileSize(file);
   while (state.pc < fsize) {
     if (SDL_PollEvent(&event)) {
@@ -131,7 +128,7 @@ void RunEmu(char*file) {
         startTime = cur_time;
       }
       if (state.int_enable) {
-        if (cpu_cycles > CLOCK_SPEED / 120) {
+        if (cpu_cycles > clock_speed) {
           cpu_cycles = 0;
           if (middle == 1) {
             GenerateInterrupt(&state, 8);
@@ -139,7 +136,7 @@ void RunEmu(char*file) {
           } else {
             GenerateInterrupt(&state, 10);
             middle = 1;
-            DrawScreen(&state, rend, middle);
+            DrawScreen(&state, &g, middle);
             cur_time = getCurrentTime();
             startTime = cur_time;
           }
@@ -148,5 +145,5 @@ void RunEmu(char*file) {
     cpu_cycles += NextInstruction(&state, &inp);
   }
   print_state(&state);
-  EndScreen(rend, win);
+  EndScreen(&g);
 }
