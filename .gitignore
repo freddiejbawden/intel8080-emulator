@@ -2,4 +2,6 @@
 intel8080
 obj/**
 rom/**
+sounds/**
 .vscode/**
+.DS_Store
