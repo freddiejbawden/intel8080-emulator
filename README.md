@@ -4,10 +4,10 @@ Originally following the [Emulator-101 tutorial](http://emulator101.com/), but d
 
 **Goals**
 
-[x] Tests passing
-[x] Attract Mode Running
-[] SDL Taking Input
-[] Game Playable
+- [x] Tests passing
+- [x] Attract Mode Running
+- [ ] SDL Taking Input
+- [ ] Game Playable
 
 ## Testing 
 
