@@ -6,9 +6,39 @@ Originally following the [Emulator-101 tutorial](http://emulator101.com/), but d
 
 - [x] Tests passing
 - [x] Attract Mode Running
-- [ ] SDL Taking Input
-- [ ] Game Playable
-- [ ] Sound
+- [x] SDL Taking Input
+- [x] Game Playable
+- [x] Sound
+
+## Running Space Invaders
+
+To run Space Invaders you'll need to provide a ROM, the ROM generally comes in 4 parts:
+
+```
+invaders.e
+invaders.f
+invaders.g
+invaders.h
+```
+
+Copy these files into `./rom` and run using `make && ./intel8080 rom/invaders`. 
+
+### Sound
+
+To add audio to the game, you'll need to provide the sounds yourself. The program uses `.wav` files. The files should be named as such:
+
+```
+UFO Move          -> 0.wav
+Player Shooting   -> 1.wav
+Player Death      -> 2.wav
+Invader Die       -> 3.wav
+Fleet Movement 1  -> 4.wav
+Fleet Movement 2  -> 5.wav
+Fleet Movement 3  -> 6.wav
+Fleet Movement 4  -> 7.wav
+UFO Hit           -> 8.wav
+```
+
 ## Testing 
 
 Run `make test && ./8080testrunner`
@@ -66,16 +96,8 @@ sta nnnn / lda nnnn...........  OK
 <rlc,rrc,ral,rar>.............  OK
 stax <b,d>....................  OK
 ```
+## Things that could be improved
 
-## Running Space Invaders
+- Code is a bit messy, my first time doing something non-trivial with C. Would like to revisit in future to redo
 
-To run Space Invaders you'll need to provide a ROM, the ROM generally comes in 4 parts:
 
-```
-invaders.e
-invaders.f
-invaders.g
-invaders.h
-```
-
-Copy these files into `./rom` and build and run using `./intel8080 rom/invaders` (I'll clean this up a bit soonTM)

@@ -15,7 +15,7 @@ LDFLAGS=-lSDL2 -lsdl2_mixer
 
 .PHONY: all clean debug
 
-all: $(EXE) invaders
+all: $(EXE) rom/invaders
 emu: $(EXE)
 
 
@@ -47,7 +47,7 @@ debug: DEBUG = -g -O0
 
 debug: all
 
-invaders: 
+rom/invaders:
 	bash ./createRom.sh
 
 
