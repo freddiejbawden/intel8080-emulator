@@ -2,6 +2,7 @@
 #include <i8080.h>
 #include <stdio.h>
 #include <input.h>
+#include <audio.h>
 
 int shift_register_offset = 0;
 int shift0 = 0;
@@ -34,10 +35,31 @@ void MachineOutPort(State8080 *state, uint8_t port, uint8_t value) {
     case 2:
       shift_register_offset = value  &0x7;
       break;
+    case 3:
+      {
+        for (int i = 0; i < 4; i++) {
+          uint8_t play_sound = (state->a >> i) & 0x1;
+          if (i == 0) {
+            // UFO Sound 
+            HandleAudioCallLoop(i, play_sound);
+          }
+          HandleAudioCall(i,play_sound);
+        }
+      }
+      break;
     case 4:
       shift0 = shift1;
       shift1 = value;
       break;
+    case 5:
+    {
+      for (int i = 0; i < 5; i++) {
+        uint8_t play_sound = (state->a >> i) & 0x1;
+        HandleAudioCall(i + 4,play_sound);
+      }
+    }
+    break;
+       
   }
 }
 

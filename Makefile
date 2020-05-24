@@ -11,7 +11,7 @@ OBJ = $(SRC:$(SRC_DIR)/%.c=$(OBJ_DIR)/%.o)
 
 CFLAGS += -Wall
 CPPFLAGS += -Iinclude
-LDFLAGS=-l SDL2-2.0.0
+LDFLAGS=-lSDL2 -lsdl2_mixer
 
 .PHONY: all clean debug
 

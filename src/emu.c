@@ -8,7 +8,7 @@
 #include <machine.h>
 #include <i8080.h>
 #include <input.h>
-
+#include <audio.h>
 
 
 void GenerateInterrupt(State8080 *state, int interrupt_num)    
@@ -110,6 +110,7 @@ void RunEmu(char*file) {
   printf("Running %s", file);
   // Set up graphics
   Graphics g = SetUpGraphics();
+  InitSounds();
   uint64_t startTime = getCurrentTime();
   SDL_Event event;
   int cpu_cycles = 0;
@@ -146,4 +147,5 @@ void RunEmu(char*file) {
   }
   print_state(&state);
   EndScreen(&g);
+  StopAudio();
 }
